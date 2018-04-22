@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{title}}</title>
+    <style type="text/css">
+        .error {
+            color: red;
+        }
+       
+        h2 {
+            background-color: powderblue;
+        }
+        h3 {
+            background-color: plum;
+        }
+    </style>
+    <h1>Dee's Blog</h1>
+
+    <nav style="text-align: right;">
+
+        <h4><a href="/newblog">Write a New Blog</a>  |
+        <a href="/">Main Blog Page</a></h4> 
+    </nav>
+</head>
+
+<body>
+
+    {% block content %}
+     {% endblock %}
+
+
+
+</body>
+
+</html>

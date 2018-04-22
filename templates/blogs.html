@@ -1,0 +1,20 @@
+{% extends "base.html" %} 
+{% block content %}
+
+<h1>Blog List</h1>
+
+<ul>
+    {% for blog in blogs %}
+    <form action="/blog?id={{ blog.id }}" method="post" name="body_id" type="hidden">
+    <li> <h2><a href="/blog?id={{ blog.id }}">{{blog.title}}</a></h2></li>
+    </form>
+        
+        <br>
+        <h4>{{blog.body}}</h4>
+    </li>
+    <hr />
+    </form>
+    {% endfor %}
+</ul>
+
+{% endblock %}
