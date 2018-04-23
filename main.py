@@ -4,7 +4,7 @@ import traceback
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://build-a-blog:build-a-blog@localhost:8889/build-a-blog"
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://blogz:blogz@localhost:8889/blogz"
 app.config["SQLALCHEMY_ECHO"] = True
 db = SQLAlchemy(app)
 
@@ -12,10 +12,69 @@ class Blog(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     title = db.Column(db.String(40))
     body = db.Column(db.String(120))
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, title, body):
+    def __init__(self, title, body, owner):
         self.title = title
         self.body = body
+        self.owner = owner
+
+class User(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True)
+    password = db.Column(db.String(120))
+    blogs = db.relationship('Blog', backref='owner')
+
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
+
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+    elif request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        users = User.query.filter_by(email=email)
+        if users.count() == 1:
+            user = users.first()
+            if password == user.password:
+                session['user'] = user.email
+                flash('welcome back, '+user.email)
+                return redirect("/newblog")
+        flash('bad username or password')
+        return redirect("/login")
+
+@app.route("/signup", methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        verify = request.form['verify']
+        if not is_email(email):
+            flash('zoiks! "' + email + '" does not seem like an email address')
+            return redirect('/signup')
+        email_db_count = User.query.filter_by(email=email).count()
+        if email_db_count > 0:
+            flash('yikes! "' + email + '" is already taken and password reminders are not implemented')
+            return redirect('/signup')
+        if password != verify:
+            flash('passwords did not match')
+            return redirect('/signup')
+        user = User(email=email, password=password)
+        db.session.add(user)
+        db.session.commit()
+        session['user'] = user.email
+        return redirect("/")
+    else:
+        return render_template('signup.html')
+
+@app.route("/logout", methods=['POST'])
+def logout():
+    del session['user']
+    return redirect("/blog")
 
 @app.route('/', methods=['GET','POST'])
 def index():
@@ -31,15 +90,6 @@ def blogs():
     #print(post)
     #print('6'*500)
     return render_template('individual_entry.html', title=post.title, post=post)
-'''
-@app.route("/blog/<blog_id>", methods=['POST', 'GET'])
-def indvidual_blogpost(blog_id):
-    post = Blog.query.get(blog_id)
-    #post = request.args.get('id')
-    #print(post)
-    #print('6'*500)
-    return render_template('individual_entry.html', title=post.title, post=post)
-'''
 
 @app.route("/newblog", methods=['POST', 'GET'])
 def index2():
@@ -54,7 +104,7 @@ def index2():
 
             blog_body = request.form['blog_body']
             blog_name = request.form['blog_name']
-            new_blog = Blog(blog_name, blog_body)
+            new_blog = Blog(blog_name, blog_body, blog_owner)
             db.session.add(new_blog)
             
 
@@ -73,7 +123,7 @@ def index2():
             else:
 
                 return render_template('newblog.html', title="New Blog", blogs=blogs, 
-                    body_error=body_error, title_error=title_error, blog_body=blog_body, blog_name=blog_name)
+                    body_error=body_error, title_error=title_error, blog_body=blog_body, blog_name=blog_name, blog_owner=blog_owner)
 
         else:
             return render_template('newblog.html', title="New Blog", blogs=blogs,)
@@ -81,6 +131,15 @@ def index2():
             
     except Exception:
             traceback.print_exc()
+
+endpoints_without_login = ['login', 'signup','blog', 'index']
+
+@app.before_request
+def require_login():
+    if not ('user' in session or request.endpoint in endpoints_without_login):
+        return redirect("/signup")
+
+app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RU'
 
 if __name__ == '__main__':
     app.run()
