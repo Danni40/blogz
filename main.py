@@ -1,6 +1,8 @@
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, session, flash
 from flask_sqlalchemy import SQLAlchemy
 import traceback
+import cgi
+
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
@@ -71,16 +73,50 @@ def signup():
     else:
         return render_template('signup.html')
 
+def is_email(string):
+    atsign_index = string.find('@')
+    atsign_present = atsign_index >= 0
+    if not atsign_present:
+        return False
+    else:
+        domain_dot_index = string.find('.', atsign_index)
+        domain_dot_present = domain_dot_index >= 0
+        return domain_dot_present
+
 @app.route("/logout", methods=['POST'])
 def logout():
     del session['user']
     return redirect("/blog")
-
+'''
 @app.route('/', methods=['GET','POST'])
 def index():
 
     blogs = Blog.query.all()
     return render_template("blogs.html", blogs=blogs)
+'''
+@app.route('/', methods=['GET','POST'])
+def index():
+    blogs = None
+    all_blogs = Blog.query.all()
+
+    data_tuples = []
+
+    user = None
+    try:
+        if session['logged_in']: 
+            blogs = Blog.query.filter(User.id == session["owner_id"])
+        else:
+            pass
+    except KeyError:
+        pass
+
+    for blog in all_blogs:
+        #grab auth username
+        author_object = User.query.get(blog.owner_id)
+        author_username = author_object.email
+        object_tuple=(blog.title, blog.id, author_username)
+        data_tuples.append(object_tuple)
+    return render_template('index.html', title="Home", blogs=blogs, user=user, data_tuples=data_tuples)
 
 @app.route("/blog", methods=['GET','POST'])
 def blogs():
@@ -96,7 +132,7 @@ def index2():
     title_error=''
     body_error=''
     blogs = Blog.query.all()
-
+    owner = User.query.filter_by(email=session['user']).first()
     print(blogs)
 
     try:
@@ -104,7 +140,8 @@ def index2():
 
             blog_body = request.form['blog_body']
             blog_name = request.form['blog_name']
-            new_blog = Blog(blog_name, blog_body, blog_owner)
+
+            new_blog = Blog(blog_name, blog_body, owner)
             db.session.add(new_blog)
             
 
@@ -123,7 +160,7 @@ def index2():
             else:
 
                 return render_template('newblog.html', title="New Blog", blogs=blogs, 
-                    body_error=body_error, title_error=title_error, blog_body=blog_body, blog_name=blog_name, blog_owner=blog_owner)
+                    body_error=body_error, title_error=title_error, blog_body=blog_body, blog_name=blog_name, owner=owner)
 
         else:
             return render_template('newblog.html', title="New Blog", blogs=blogs,)
