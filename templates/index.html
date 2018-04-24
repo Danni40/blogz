@@ -1,20 +1,11 @@
 {% extends "base.html" %} 
 {% block content %}
 
-{% if session['logged_in'] %}
-        <h1> {{ user.email }} </h1>
 
-        <nav>
-        <a href="/logout">Logout</a>
-        </nav>
-        <nav>
-        <a href="/newblog">New Blog Post</a>
-        </nav>
-    {% else %}
         <h1>What goes here?</h1>
        
 
-    {% endif %}
+ 
 
 
     {% if session['logged_in'] %}
@@ -24,7 +15,8 @@
     <li>
 
         <a href="/blog/{{blog.id}}/">{{blog.title}}</a>
-        <p>Written By: {{ session['email'] }}</p>
+        <p>Written By: {{ session['user'] }}</p>
+        
     </li>
     {% endfor %}
         </ul>
@@ -35,7 +27,7 @@
     {% for blog in data_tuples %}
 
     <a href="/blog/{{blog[1]}}/">{{blog[0]}}</a>
-    <p>Author:{{ blog[2] }}</p>
+    <p>Author: {{ blog[2] }}</p>
 
     {% endfor %}
     {% endif %}

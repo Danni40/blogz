@@ -24,27 +24,35 @@ class Blog(db.Model):
 class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120))
     email = db.Column(db.String(120), unique=True)
     password = db.Column(db.String(120))
     blogs = db.relationship('Blog', backref='owner')
+    logged_in = db.Column(db.Boolean())
 
-    def __init__(self, email, password):
+    def __init__(self, username, email, password):
+        self.username = username
         self.email = email
         self.password = password
+        self.logged_in = False
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
         return render_template('login.html')
     elif request.method == 'POST':
+        username = request.form['username']
         email = request.form['email']
         password = request.form['password']
+        #users = User.query.filter_by(email=email)
         users = User.query.filter_by(email=email)
         if users.count() == 1:
             user = users.first()
             if password == user.password:
-                session['user'] = user.email
-                flash('welcome back, '+user.email)
+                session['user'] = user.username
+                #session['owner_id'] = user.id
+                session['logged_in'] = True
+                flash('welcome back, '+user.username)
                 return redirect("/newblog")
         flash('bad username or password')
         return redirect("/login")
@@ -52,9 +60,11 @@ def login():
 @app.route("/signup", methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
+        username = request.form['username']
         email = request.form['email']
         password = request.form['password']
         verify = request.form['verify']
+        existing_user = User.query.filter_by(email=email).first()
         if not is_email(email):
             flash('zoiks! "' + email + '" does not seem like an email address')
             return redirect('/signup')
@@ -65,10 +75,11 @@ def signup():
         if password != verify:
             flash('passwords did not match')
             return redirect('/signup')
-        user = User(email=email, password=password)
+        user = User(username=username, email=email, password=password)
         db.session.add(user)
         db.session.commit()
-        session['user'] = user.email
+        session['user'] = user.username
+        session['logged_in'] = True
         return redirect("/")
     else:
         return render_template('signup.html')
@@ -85,6 +96,7 @@ def is_email(string):
 
 @app.route("/logout", methods=['POST'])
 def logout():
+    session.pop('logged_in', None)
     del session['user']
     return redirect("/blog")
 '''
@@ -97,11 +109,13 @@ def index():
 @app.route('/', methods=['GET','POST'])
 def index():
     blogs = None
+    
     all_blogs = Blog.query.all()
 
     data_tuples = []
 
     user = None
+    
     try:
         if session['logged_in']: 
             blogs = Blog.query.filter(User.id == session["owner_id"])
@@ -109,7 +123,7 @@ def index():
             pass
     except KeyError:
         pass
-
+    
     for blog in all_blogs:
         #grab auth username
         author_object = User.query.get(blog.owner_id)
@@ -132,7 +146,7 @@ def index2():
     title_error=''
     body_error=''
     blogs = Blog.query.all()
-    owner = User.query.filter_by(email=session['user']).first()
+    owner = User.query.filter_by(username=session['user']).first()
     print(blogs)
 
     try:
