@@ -1,10 +1,11 @@
 {% extends "base.html" %} 
 {% block content %}
 
+<h1>Blog List</h1>
 
 <ul>
-    {% for blog in blogs %}
-    <form action="/blog?id={{ blog.id }}" method="post" name="body_id" type="hidden">
+    {% for blog in all_blogs %}
+    <form action="/blog" method="get" name="body_id" type="hidden">
     <li> <h2><a href="/blog?id={{ blog.id }}">{{blog.title}}</a></h2></li>
     </form>
         
@@ -15,5 +16,22 @@
     </form>
     {% endfor %}
 </ul>
+<h1>Blog Users</h1>
+       <br>
+       <ul>
+        {% for user in users %}
+        <li> 
+            {{user.username}}
+        </li>
+        {% endfor %}
+    </ul>
+
+  <hr>
+    {% for blog in data_tuples %}
+
+    <a href="/blog?id={{blog[1]}}/">{{blog[0]}}</a>
+    <p>Written By: {{ blog[2] }}</p>
+<hr>
+    {% endfor %}
 
 {% endblock %}

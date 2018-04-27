@@ -1,8 +1,7 @@
-from flask import Flask, request, redirect, render_template, session, flash
+from flask import Flask, request, redirect, render_template, session, flash, url_for
 from flask_sqlalchemy import SQLAlchemy
 import traceback
 import cgi
-
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
@@ -44,13 +43,11 @@ def login():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
-        #users = User.query.filter_by(email=email)
         users = User.query.filter_by(email=email)
         if users.count() == 1:
             user = users.first()
             if password == user.password:
                 session['user'] = user.username
-                #session['owner_id'] = user.id
                 session['logged_in'] = True
                 flash('welcome back, '+user.username)
                 return redirect("/newblog")
@@ -70,8 +67,22 @@ def signup():
             return redirect('/signup')
         email_db_count = User.query.filter_by(email=email).count()
         if email_db_count > 0:
-            flash('yikes! "' + email + '" is already taken and password reminders are not implemented')
+            flash('yikes! "' + email + '" is already taken "')
             return redirect('/signup')
+        username_db_count = User.query.filter_by(username=username).count()
+        if username_db_count > 0:
+            flash('yikes! "' + username + '" is already taken "')
+            return redirect('/signup')
+        if username == '' or email == '' or password == '' or verify == '':
+            flash('Nope! Cannot have any blank fields')
+            return redirect('/signup')
+        if ' ' in username or ' ' in email or ' ' in password:
+            flash('Username, email or password cannot contain any spaces.')
+            return redirect('/signup')
+        if len(username) < 3 or len(username) > 20:
+            flash('Password must meet length requirements')
+            return redirect('/signup')
+        name_error="That's not a valid username"
         if password != verify:
             flash('passwords did not match')
             return redirect('/signup')
@@ -80,7 +91,7 @@ def signup():
         db.session.commit()
         session['user'] = user.username
         session['logged_in'] = True
-        return redirect("/")
+        return redirect("/newblog")
     else:
         return render_template('signup.html')
 
@@ -99,47 +110,28 @@ def logout():
     session.pop('logged_in', None)
     del session['user']
     return redirect("/blog")
-'''
+
 @app.route('/', methods=['GET','POST'])
 def index():
 
-    blogs = Blog.query.all()
-    return render_template("blogs.html", blogs=blogs)
-'''
-@app.route('/', methods=['GET','POST'])
-def index():
-    blogs = None
-    
-    all_blogs = Blog.query.all()
-
-    data_tuples = []
-
-    user = None
-    
-    try:
-        if session['logged_in']: 
-            blogs = Blog.query.filter(User.id == session["owner_id"])
-        else:
-            pass
-    except KeyError:
-        pass
-    
-    for blog in all_blogs:
-        #grab auth username
-        author_object = User.query.get(blog.owner_id)
-        author_username = author_object.email
-        object_tuple=(blog.title, blog.id, author_username)
-        data_tuples.append(object_tuple)
-    return render_template('index.html', title="Home", blogs=blogs, user=user, data_tuples=data_tuples)
+    users = User.query.all()
+    return render_template('index.html', users=users)
 
 @app.route("/blog", methods=['GET','POST'])
-def blogs():
-    #post = Blog.query.get('id')
-    blog_id = request.args.get('id')
-    post=Blog.query.get(blog_id)
-    #print(post)
-    #print('6'*500)
-    return render_template('individual_entry.html', title=post.title, post=post)
+def blog():
+    if not request.args:
+        blogs = Blog.query.all()
+        return render_template("blog.html", blogs=blogs)
+    elif request.args.get('id'):
+        user_id = request.args.get('id')
+        blog = Blog.query.filter_by(id=user_id).first()
+        user = User.query.filter_by(id=user_id).first()
+        return render_template('blogpost.html', blog=blog, user=user)
+    elif request.args.get('user'):
+        user_id = request.args.get('user')
+        user = User.query.filter_by(id=user_id).first()
+        blogs = Blog.query.filter_by(owner_id=user_id).all()
+        return render_template('user.html', blogs=blogs, user=user)
 
 @app.route("/newblog", methods=['POST', 'GET'])
 def index2():
@@ -168,9 +160,8 @@ def index2():
             if not title_error and not body_error:
                 db.session.commit()
                 blog_id = new_blog.id
-                #return redirect('/?id={blog_id}'.format(blog_id=blog_id))
-                #return render_template('blogs.html', title="New Blog", blogs=blogs, blog_name=blog_name, blog_body=blog_body)
-                return redirect('/')
+                return redirect('/blog?id={blog_id}'.format(blog_id=blog_id))
+
             else:
 
                 return render_template('newblog.html', title="New Blog", blogs=blogs, 
@@ -178,19 +169,18 @@ def index2():
 
         else:
             return render_template('newblog.html', title="New Blog", blogs=blogs,)
-
             
     except Exception:
             traceback.print_exc()
 
-endpoints_without_login = ['login', 'signup','blog', 'index']
+endpoints_without_login = ['login', 'signup','index', 'blog']
 
 @app.before_request
 def require_login():
     if not ('user' in session or request.endpoint in endpoints_without_login):
         return redirect("/signup")
 
-app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RU'
+app.secret_key = 'dksfmskfslvnmksmkslmgskldm'
 
 if __name__ == '__main__':
     app.run()

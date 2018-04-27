@@ -19,8 +19,8 @@
 
     <nav style="text-align: right;">
 
-        <h4><a href="/newblog">Write a New Blog</a>  |
-        <a href="/">Main Blog Page</a></h4> 
+        <h4><a href="/newblog">New Blog</a>  |
+        <a href="/">Home</a></h4> 
     </nav>
 </head>
 
@@ -35,9 +35,9 @@
           <a href="login">login</a> | <a href="signup">signup</a>
         {% endif %}
       </div>
-      <h1>
-          <a href="/">Blog List</a>
-      </h1>
+      <h2>
+          <a href="/blog">Blog List</a>
+      </h2>
 
       {% with messages = get_flashed_messages() %}
         {% if messages %}
