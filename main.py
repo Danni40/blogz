@@ -61,6 +61,9 @@ def signup():
         email = request.form['email']
         password = request.form['password']
         verify = request.form['verify']
+        if username == '' or email == '' or password == '' or verify == '':
+            flash('Sorry! Cannot have any blank fields')
+            return redirect('/signup')
         existing_user = User.query.filter_by(email=email).first()
         if not is_email(email):
             flash('zoiks! "' + email + '" does not seem like an email address')
@@ -72,10 +75,7 @@ def signup():
         username_db_count = User.query.filter_by(username=username).count()
         if username_db_count > 0:
             flash('yikes! "' + username + '" is already taken "')
-            return redirect('/signup')
-        if username == '' or email == '' or password == '' or verify == '':
-            flash('Nope! Cannot have any blank fields')
-            return redirect('/signup')
+            return redirect('/signup')     
         if ' ' in username or ' ' in email or ' ' in password:
             flash('Username, email or password cannot contain any spaces.')
             return redirect('/signup')
